@@ -3,7 +3,7 @@ Aufruf: py stresstest.py [seeds, z. B. 1,2]  [aufgaben, z. B. jahre,kontext]"""
 import json, os, subprocess, sys, time
 
 HIER = os.path.dirname(os.path.abspath(__file__))
-AUFGABEN = ["gegeben", "faktor", "jahre", "kontrolle", "dreisatz", "mc", "rot", "zinssatz", "kontext"]
+AUFGABEN = ["gegeben", "faktor", "jahre", "kontrolle", "dreisatz", "mc", "radio", "rot", "zinssatz", "kontext"]
 seeds = sys.argv[1].split(",") if len(sys.argv) > 1 else ["1", "2"]
 auswahl = sys.argv[2].split(",") if len(sys.argv) > 2 else AUFGABEN
 
