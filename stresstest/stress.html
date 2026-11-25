@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><title>STRESS</title>
+<style>
+ body{font-family:"Segoe UI",sans-serif;margin:0;padding:18px 28px;background:#fff;color:#1f2937;
+      background-image:linear-gradient(#eef2f7 1px,transparent 1px),linear-gradient(90deg,#eef2f7 1px,transparent 1px);background-size:22px 22px}
+ h2{margin:6px 0 4px} .karte{background:#fff;border:2px solid #1f2937;border-radius:8px;padding:14px 18px;max-width:760px}
+ .frage{background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;padding:10px 14px;line-height:1.5}
+ .schritt{margin-top:16px;padding-top:12px;border-top:2px dashed #cbd5e1}
+ .nr{display:inline-block;border:2px solid #1f2937;width:22px;text-align:center;font-weight:bold;margin-right:8px}
+ .nr.ok{background:#15803d;color:#fff;border-color:#15803d}
+ input[type=text]{font-size:17px;width:90px;padding:6px 8px;text-align:right;border:2px solid #94a3b8;border-radius:6px}
+ input.klein{width:38px;font-size:13px;padding:2px 4px;vertical-align:super}
+ input.gruen{border-color:#15803d;background:#ecfdf5} input.rot{border-color:#dc2626;background:#fef2f2}
+ select{font-size:16px;padding:5px} table{border-collapse:collapse;margin:8px 0} td,th{border:2px solid #1f2937;padding:8px 14px}
+ th{background:#e8eef6} .hinweis{background:#fde8e8;border-left:4px solid #dc2626;padding:10px 14px;margin-top:10px}
+ .gut{background:#e7f6ec;border-left:4px solid #15803d;padding:10px 14px;margin-top:10px}
+ button{background:#1f2937;color:#fff;font-weight:bold;font-size:16px;border:0;border-radius:6px;padding:10px 18px;margin-top:14px}
+ label.mc{display:block;border:2px solid #94a3b8;border-radius:6px;padding:10px 14px;margin:6px 0;font-size:17px}
+ .platz{height:1100px}
+</style></head><body>
+<div id="app"></div>
+<script>
+// ---------- Zufall mit Seed, damit jeder Lauf nachvollziehbar ist ----------
+const P = new URLSearchParams(location.search), T = P.get("t") || "gegeben", S = +(P.get("s") || 1);
+let st = S * 9973 + T.length * 31;
+const zufall = () => { st = (st * 1103515245 + 12345) % 2147483648; return st / 2147483648; };
+const wahl = a => a[Math.floor(zufall() * a.length)];
+const r2 = x => Math.round(x * 100 + 1e-9) / 100;
+const de = (x, nk) => (nk === undefined ? String(+x.toFixed(6)) : x.toFixed(nk)).replace(".", ",");
+const namen = ["Sofia", "Kemal", "Lea", "Jonas", "Mia", "Herr Kaya", "Frau Weber"];
+
+const K = wahl([600, 750, 1200, 2500, 3200, 3900, 4850, 7300, 12600]);
+const p = wahl([1.5, 2.5, 3.2, 4, 1.75, 2.8, 6]);
+const n = wahl([2, 3]);
+const q = 1 + p / 100;
+const wer = wahl(namen);
+const SOLL = {};                 // id -> erwarteter Wert (Zahl oder Text)
+let html = "";
+
+function feld(id, soll, kl = "", vor = "") {
+  SOLL[id] = soll;
+  return `<input type="text" id="${id}" class="${kl}" value="${vor}" autocomplete="off">`;
+}
+function gruen(wert, kl = "") { return `<input type="text" class="gruen ${kl}" value="${wert}" readonly>`; }
+const knopf = `<button onclick="document.title='PRUEFEN GEKLICKT'">Prüfen</button>`;
+function jahre(start, bisJahr, roundEach) {
+  const out = []; let k = start;
+  for (let j = 1; j <= bisJahr; j++) { k = roundEach ? r2(k * q) : k * q; out.push(r2(k)); }
+  return out;
+}
+const aufgabeText = `<div class="frage">${wer} legt ${de(K)} € für ${n} Jahre auf einem Sparkonto an. Die Zinsen bleiben auf dem Konto und werden mitverzinst. Der Zinssatz beträgt ${de(p)} % im Jahr. Wie viel Geld hat ${wer.startsWith("Herr") || wer.startsWith("Frau") ? "die Person" : wer} nach ${n} Jahren?</div>`;
+const schritt1Gruen = `<div class="schritt"><span class="nr ok">1</span><b>Was ist gegeben, was ist gesucht?</b><p>gegeben: K = ${gruen(de(K))} € &nbsp; p % = ${gruen(de(p))} % &nbsp; n = ${gruen(n)} Jahre</p><div class="gut">✔ Gut erkannt.</div></div>`;
+
+if (T === "gegeben") {
+  html = `<h2>Aufgabe 2</h2>${aufgabeText}
+  <div class="schritt"><span class="nr">1</span><b>Was ist gegeben, was ist gesucht?</b>
+  <p>gegeben: K = ${feld("K", K)} € &nbsp; p % = ${feld("p", p)} % &nbsp; n = ${feld("n", n)} Jahre</p>
+  <p>gesucht: <select id="ges"><option>– wählen –</option><option>Zinsen im ersten Jahr</option><option>Zinssatz</option><option>Endkapital nach ${n} Jahren</option><option>Anfangskapital</option></select></p>${knopf}</div>`;
+  SOLL.ges = `Endkapital nach ${n} Jahren`;
+} else if (T === "faktor") {
+  html = `<h2>Aufgabe 1</h2>${aufgabeText}${schritt1Gruen}
+  <div class="schritt"><span class="nr">2</span><b>Den Wachstumsfaktor (1 + p %) bestimmen</b>
+  <p>Wachstumsfaktor = 1 + ${feld("fp", p)} % = 1 + ${feld("fd", p / 100)} = ${feld("fq", q)}</p>${knopf}</div>`;
+} else if (T === "jahre") {
+  const w = jahre(K, 3, true);
+  html = `<h2>Aufgabe 1</h2>${aufgabeText}${schritt1Gruen}
+  <div class="schritt"><span class="nr ok">2</span><b>Wachstumsfaktor</b> = ${gruen(de(q))}</div>
+  <div class="schritt"><span class="nr">3</span><b>Jahr für Jahr rechnen</b><br>Multipliziere das Endkapital des Vorjahres mit dem Wachstumsfaktor. Runde auf Cent.
+  <table><tr><th>Jahr</th><th>Rechnung</th><th>Endkapital</th></tr>
+  ${w.map((v, i) => `<tr><td>${i + 1}</td><td>K<sub>${i}</sub> · ${de(q)}</td><td>K<sub>${i + 1}</sub> = ${feld("j" + (i + 1), v)} €</td></tr>`).join("")}
+  </table>${knopf}</div>`;
+} else if (T === "kontrolle") {
+  const kn = r2(K * Math.pow(q, n));
+  html = `<h2>Aufgabe 3</h2>${aufgabeText}${schritt1Gruen}
+  <div class="schritt"><span class="nr">4</span><b>Kontrolle mit der Formel</b>
+  <p style="font-size:18px">K<sub>n</sub> = K · (1 + p %)<sup>n</sup></p>
+  <p style="font-size:18px">K<sub>${n}</sub> = ${feld("kK", K)} € · ${feld("kq", q)}${feld("kn", n, "klein")} = ${feld("kE", kn)} €</p>${knopf}</div>`;
+} else if (T === "dreisatz") {
+  const ein = K / 100, z = r2(K * p / 100);
+  html = `<h2>Aufgabe 2 <small style="border:2px solid #1f2937;border-radius:6px;padding:0 6px">mit Taschenrechner</small></h2>
+  <div class="frage">${wer} legt ${de(K)} € an. Der Zinssatz beträgt ${de(p)} %. Wie viel Zinsen gibt es nach einem Jahr?</div>
+  <div class="schritt"><span class="nr">2</span><b>Mit dem Dreisatz</b><br>Fülle die Tabelle aus. Was du in der einen Spalte rechnest, rechnest du in der anderen Spalte genauso.
+  <table><tr><td style="border:0"></td><th>Anteil</th><th>Euro</th></tr>
+  <tr><td style="border:0"></td><td>100 %</td><td>${feld("d100", K)}</td></tr>
+  <tr><td style="border:0">: ${feld("dop1", 100)}</td><td>1 %</td><td>${feld("d1", ein)}</td></tr>
+  <tr><td style="border:0">· ${feld("dop2", p)}</td><td>${feld("dp", p)} %</td><td>${feld("dz", z)}</td></tr></table>
+  <p><b>Deine Ergebnisse</b> (nur die Zahl, Dezimalzahlen mit Komma)<br>Zinsen nach einem Jahr ${feld("dErg", z)} €</p>${knopf}</div>`;
+} else if (T === "mc") {
+  const opts = ["K<sub>n</sub> = K · n<sup>p</sup>", "K<sub>n</sub> = K · (1 + p %) · n", "K<sub>n</sub> = K + p % · n", "K<sub>n</sub> = K · (1 + p %)<sup>n</sup>", "K<sub>n</sub> = K · p % · n"];
+  const reihen = [0, 1, 2, 3, 4].sort(() => zufall() - 0.5);
+  html = `<h2>Bin ich vorbereitet? Frage 3</h2><div class="karte"><b>Frage 3</b><p>Mit welcher Formel berechnest du das Endkapital nach n Jahren mit Zinseszins?</p>
+  ${reihen.map(i => `<label class="mc"><input type="radio" name="mc" value="${i}" ${i === 2 ? "checked" : ""}> ${opts[i]}</label>`).join("")}
+  <div class="hinweis">✘ <b>Noch nicht richtig.</b> Jedes Jahr wird mit dem Wachstumsfaktor multipliziert.</div>
+  <button onclick="document.title='PRUEFEN GEKLICKT'">Nochmal prüfen</button></div>`;
+  SOLL.mc = "3";
+} else if (T === "rot") {
+  const w = jahre(K, 2, true);
+  const falsch = w.map(v => de(r2(v + wahl([-3.5, 1.25, 12, -0.4])), 2));
+  html = `<h2>Aufgabe 2</h2>${aufgabeText}${schritt1Gruen}
+  <div class="schritt"><span class="nr ok">2</span><b>Wachstumsfaktor</b> = ${gruen(de(q))}</div>
+  <div class="schritt"><span class="nr">3</span><b>Jahr für Jahr rechnen</b><br>Multipliziere das Endkapital des Vorjahres mit dem Wachstumsfaktor. Runde auf Cent.
+  <table><tr><th>Jahr</th><th>Rechnung</th><th>Endkapital</th></tr>
+  ${w.map((v, i) => `<tr><td>${i + 1}</td><td>K<sub>${i}</sub> · ${de(q)}</td><td>K<sub>${i + 1}</sub> = ${feld("r" + (i + 1), v, "rot", falsch[i])} €</td></tr>`).join("")}
+  </table><div class="hinweis">✘ <b>Noch nicht ganz.</b> Die rot markierten Felder stimmen nicht. Rechne das Kapital vom Vorjahr mal ${de(q)}. Runde auf Cent.</div>${knopf}</div>`;
+} else if (T === "zinssatz") {
+  const Z = r2(K * p / 100);
+  html = `<h2>Aufgabe 5 <small style="border:2px solid #1f2937;border-radius:6px;padding:0 6px">ohne Taschenrechner</small></h2>
+  <div class="frage">${wer} hat ${de(K)} € angelegt und bekommt nach einem Jahr ${de(Z, 2)} € Zinsen. Wie hoch ist der Zinssatz? Wie viel Zinsen wären es bei doppeltem Kapital?</div>
+  <div class="schritt"><span class="nr">1</span><b>Was ist gesucht?</b> &nbsp; gesucht: <select id="zges"><option>– wählen –</option><option>Zinsen im ersten Jahr</option><option>Endkapital nach 2 Jahren</option><option>Zinssatz</option></select></div>
+  <div class="schritt"><span class="nr">2</span><b>Deine Ergebnisse</b> (nur die Zahl, Dezimalzahlen mit Komma)
+  <p>p % = ${feld("zp", p)} % <br><br>Zinsen bei doppeltem Kapital: ${feld("z2", r2(2 * Z))} €</p>${knopf}</div>`;
+  SOLL.zges = "Zinssatz";
+} else if (T === "kontext") {
+  const w = jahre(K, 2, true);
+  html = `<h2>Schritt für Schritt: Mit Zinseszinsen rechnen</h2><h2>Aufgabe 2</h2>${aufgabeText}${schritt1Gruen}
+  <div class="schritt"><span class="nr ok">2</span><b>Wachstumsfaktor bestimmen</b> – erledigt ✔</div>
+  <div class="platz"></div>
+  <div class="schritt" id="unten"><span class="nr">3</span><b>Jahr für Jahr rechnen</b><br>Multipliziere das Endkapital des Vorjahres mit dem Wachstumsfaktor. Runde auf Cent.
+  <table><tr><th>Jahr</th><th>Rechnung</th><th>Endkapital</th></tr>
+  ${w.map((v, i) => `<tr><td>${i + 1}</td><td>K<sub>${i}</sub> · (1 + p %)</td><td>K<sub>${i + 1}</sub> = ${feld("x" + (i + 1), v)} €</td></tr>`).join("")}
+  </table>${knopf}<div style="height:600px"></div></div>`;
+}
+document.getElementById("app").innerHTML = html;
+if (T === "kontext") setTimeout(() => document.getElementById("unten").scrollIntoView({block: "start"}), 50);
+
+// ---------- Auswertung: steht im Fenstertitel ----------
+function zahl(s) {
+  s = String(s).replace(/[\s€%]/g, "");
+  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  return s === "" ? NaN : Number(s);
+}
+function pruefe() {
+  let ok = 0; const falsch = [];
+  for (const [id, soll] of Object.entries(SOLL)) {
+    let ist;
+    if (id === "mc") { const r = document.querySelector('input[name=mc]:checked'); ist = r ? r.value : ""; }
+    else ist = document.getElementById(id).value;
+    const richtig = typeof soll === "number" ? Math.abs(zahl(ist) - soll) < 0.006 : ist.trim() === soll;
+    if (richtig) ok++; else falsch.push(`${id}=${ist || "leer"}(soll ${typeof soll === "number" ? de(+soll.toFixed(4)) : soll})`);
+  }
+  if (!document.title.startsWith("PRUEFEN"))
+    document.title = `STRESS ${T} s${S} ${ok}/${Object.keys(SOLL).length}` + (falsch.length ? " FALSCH " + falsch.join(" ") : " ALLES RICHTIG");
+}
+document.addEventListener("input", pruefe); document.addEventListener("change", pruefe); pruefe();
+</script></body></html>
