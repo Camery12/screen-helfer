@@ -54,10 +54,22 @@ def raender():
 
 # Edge setzt seine gespeicherte Fensterposition manchmal verspaetet -> so lange hinschieben,
 # bis das Fenster 2 s lang stillsteht
-u32.ShowWindow(ctypes.c_void_p(hwnd), 9)                       # SW_RESTORE
+# Bildschirm fuer den Test: der zweite Monitor, wenn vorhanden (dort stoert nichts), sonst der erste
+monitore = []
+def _mon(hmon, hdc, rect, _):
+    rc = ctypes.cast(rect, ctypes.POINTER(ctypes.wintypes.RECT)).contents
+    monitore.append((rc.left, rc.top, rc.right, rc.bottom))
+    return True
+u32.EnumDisplayMonitors(None, None, ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p,
+                                                       ctypes.c_void_p, ctypes.c_void_p)(_mon), 0)
+monitor = sorted(monitore)[-1]          # der rechteste Bildschirm
+# Vollbild (maximiert) auf diesem Bildschirm; so lange wiederholen, bis das Fenster stillsteht
 letzte = None
 for _ in range(10):
-    u32.SetWindowPos(ctypes.c_void_p(hwnd), ctypes.c_void_p(-1), 700, 40, 1000, 880, 0x0040)
+    u32.ShowWindow(ctypes.c_void_p(hwnd), 9)                   # SW_RESTORE
+    u32.SetWindowPos(ctypes.c_void_p(hwnd), ctypes.c_void_p(-1), monitor[0] + 50, monitor[1] + 50,
+                     800, 600, 0x0040)
+    u32.ShowWindow(ctypes.c_void_p(hwnd), 3)                   # SW_MAXIMIZE
     u32.SetForegroundWindow(ctypes.c_void_p(hwnd))
     time.sleep(2)
     jetzt = raender()
@@ -66,7 +78,8 @@ for _ in range(10):
     letzte = jetzt
 r = ctypes.wintypes.RECT(*raender())
 # Nur den Seiteninhalt nehmen: Titelleiste oben weg, kleiner Rand ringsum
-bereich = (r.left + 6, r.top + 50, r.right - 22, r.bottom - 8)
+bereich = (max(r.left, monitor[0]) + 4, max(r.top, monitor[1]) + 50,
+           min(r.right, monitor[2]) - 22, min(r.bottom, monitor[3]) - 60)   # unten Taskleiste frei lassen
 # Sicherheitscheck: der Ausschnitt darf nur das Testfenster zeigen
 pt = ctypes.wintypes.POINT
 for px, py in [(bereich[0] + 3, bereich[1] + 3), (bereich[2] - 3, bereich[3] - 3),
