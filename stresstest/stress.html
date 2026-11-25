@@ -110,6 +110,32 @@ if (T === "gegeben") {
   <div class="schritt"><span class="nr">2</span><b>Deine Ergebnisse</b> (nur die Zahl, Dezimalzahlen mit Komma)
   <p>p % = ${feld("zp", p)} % <br><br>Zinsen bei doppeltem Kapital: ${feld("z2", r2(2 * Z))} €</p>${knopf}</div>`;
   SOLL.zges = "Zinssatz";
+} else if (T === "radio") {
+  // Englisch-Grammatik wie im Moodle-Quiz: mehrere Fragen mit Auswahlkreisen untereinander
+  const bank = [
+    ["Malik plays the trumpet very ...", ["well", "goodly", "good"], 0],
+    ["The guard looked at us ...", ["suspicion", "suspiciously", "suspicious"], 1],
+    ["The museum was ... interesting. I want to go again!", ["really", "reality", "real"], 0],
+    ["This is the ... song on the album.", ["more beautiful", "beautifullest", "most beautiful"], 2],
+    ["She answered the question ...", ["correct", "correctly", "correction"], 1],
+    ["The test was ... than I expected.", ["easier", "more easy", "easiest"], 0],
+    ["He drives ... than his brother.", ["carefuller", "more carefully", "most careful"], 1],
+    ["The soup smells ...", ["wonderfully", "wonder", "wonderful"], 2],
+    ["They ... finished their homework yesterday.", ["have", "had", "has"], 1],
+    ["It was the ... day of my life.", ["worse", "baddest", "worst"], 2],
+  ];
+  const fragen = bank.map(f => [zufall(), f]).sort((a, b) => a[0] - b[0]).slice(0, 4).map(x => x[1]);
+  html = `<style>.q{display:flex;gap:16px;margin:18px 0}.info{border:1px solid #cbd5e1;background:#f8fafc;padding:8px;width:90px;font-size:12px}
+  .inhalt{background:#e6f0f6;border-radius:8px;padding:12px 18px;flex:1;max-width:620px}.inhalt label{display:block;margin:7px 0;font-size:15px}
+  .inhalt input{margin-right:12px;transform:scale(1.15)} .widerruf{color:#a3337a;margin-left:28px}</style>`;
+  fragen.forEach(([text, opts, richtig], i) => {
+    const reihe = [0, 1, 2].sort(() => zufall() - 0.5);
+    const vorher = zufall() < 0.6 ? wahl(reihe.filter(k => k !== richtig)) : -1;   // teils falsch vorausgewaehlt
+    html += `<div class="q"><div class="info"><b>Frage ${12 + i}</b><br>Bisher nicht beantwortet<br><br>Erreichbare Punkte: 1</div>
+    <div class="inhalt"><p>${text}</p>${reihe.map(k => `<label><input type="radio" name="q${i}" value="${k}" ${k === vorher ? "checked" : ""}>${opts[k]}</label>`).join("")}
+    <div class="widerruf">Meine Auswahl widerrufen</div></div></div>`;
+    SOLL["q" + i] = String(richtig);
+  });
 } else if (T === "kontext") {
   const w = jahre(K, 2, true);
   html = `<h2>Schritt für Schritt: Mit Zinseszinsen rechnen</h2><h2>Aufgabe 2</h2>${aufgabeText}${schritt1Gruen}
@@ -133,7 +159,7 @@ function pruefe() {
   let ok = 0; const falsch = [];
   for (const [id, soll] of Object.entries(SOLL)) {
     let ist;
-    if (id === "mc") { const r = document.querySelector('input[name=mc]:checked'); ist = r ? r.value : ""; }
+    if (id === "mc" || /^q\d$/.test(id)) { const r = document.querySelector(`input[name=${id}]:checked`); ist = r ? r.value : ""; }
     else ist = document.getElementById(id).value;
     const richtig = typeof soll === "number" ? Math.abs(zahl(ist) - soll) < 0.006 : ist.trim() === soll;
     if (richtig) ok++; else falsch.push(`${id}=${ist || "leer"}(soll ${typeof soll === "number" ? de(+soll.toFixed(4)) : soll})`);
